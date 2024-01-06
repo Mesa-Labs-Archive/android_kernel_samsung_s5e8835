@@ -2638,16 +2638,13 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 		 * device-initiated disconnect requires a core soft reset
 		 * (DCTL.CSftRst) before enabling the run/stop bit.
 		 */
-		ret = dwc3_core_soft_reset(dwc);
-		if (ret)
-			goto done;
+		dwc3_core_soft_reset(dwc);
 
 		dwc3_event_buffers_setup(dwc);
 		__dwc3_gadget_start(dwc);
 		ret = dwc3_gadget_run_stop(dwc, true, false);
 	}
 
-done:
 	pm_runtime_put(dwc->dev);
 
 	return ret;
