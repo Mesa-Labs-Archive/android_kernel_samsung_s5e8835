@@ -528,6 +528,12 @@ config PL330_DMA
 	  You need to provide platform specific settings via
 	  platform_data for a dma-pl330 device.
 
+config SAMSUNG_DMADEV
+	tristate "SAMSUNG DAMDEV support"
+	depends on PL330_DMA
+	help
+	  Use DMA device engine for PL330 DMA controller.
+
 config PXA_DMA
 	bool "PXA DMA support"
 	depends on (ARCH_MMP || ARCH_PXA)

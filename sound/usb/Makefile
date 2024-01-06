@@ -28,6 +28,10 @@ snd-usbmidi-lib-objs := midi.o
 
 # Toplevel Module Dependency
 obj-$(CONFIG_SND_USB_AUDIO) += snd-usb-audio.o snd-usbmidi-lib.o
+obj-$(CONFIG_SND_EXYNOS_USB_AUDIO_MODULE) += exynos-usb-audio-offloading.o
+exynos-usb-audio-offloading-y += exynos_usb_audio.o
+obj-$(CONFIG_SND_EXYNOS_USB_AUDIO_GIC) += exynos-usb-audio-offloading-gic.o
+exynos-usb-audio-offloading-gic-y += exynos_usb_audio_gic.o
 
 obj-$(CONFIG_SND_USB_UA101) += snd-usbmidi-lib.o
 obj-$(CONFIG_SND_USB_USX2Y) += snd-usbmidi-lib.o

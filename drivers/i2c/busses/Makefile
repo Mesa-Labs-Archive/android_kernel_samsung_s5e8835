@@ -148,3 +148,4 @@ obj-$(CONFIG_I2C_FSI)		+= i2c-fsi.o
 obj-$(CONFIG_I2C_VIRTIO)	+= i2c-virtio.o
 
 ccflags-$(CONFIG_I2C_DEBUG_BUS) := -DDEBUG
+obj-$(CONFIG_EXYNOS_ACPM_MFD_BUS)	+= acpm-mfd-bus.o

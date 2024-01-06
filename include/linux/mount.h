@@ -81,6 +81,13 @@ struct vfsmount {
 	ANDROID_KABI_RESERVE(4);
 } __randomize_layout;
 
+#ifdef CONFIG_KDP_NS
+struct kdp_vfsmount {
+	struct vfsmount mnt;
+	struct mount *bp_mount;	/* pointer to mount*/
+};
+#endif
+
 static inline struct user_namespace *mnt_user_ns(const struct vfsmount *mnt)
 {
 	/* Pairs with smp_store_release() in do_idmap_mount(). */

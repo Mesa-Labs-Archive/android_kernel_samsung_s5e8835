@@ -293,6 +293,9 @@ struct rmap_walk_control {
 	 * Return false if page table scanning in rmap_walk should be stopped.
 	 * Otherwise, return true.
 	 */
+#ifdef CONFIG_PAGE_BOOST
+	int ret;
+#endif
 	bool (*rmap_one)(struct page *page, struct vm_area_struct *vma,
 					unsigned long addr, void *arg);
 	int (*done)(struct page *page);
@@ -308,7 +311,7 @@ void rmap_walk_locked(struct page *page, struct rmap_walk_control *rwc);
  * Called by memory-failure.c to kill processes.
  */
 struct anon_vma *page_lock_anon_vma_read(struct page *page,
-					 struct rmap_walk_control *rwc);
+					  struct rmap_walk_control *rwc);
 void page_unlock_anon_vma_read(struct anon_vma *anon_vma);
 
 #else	/* !CONFIG_MMU */

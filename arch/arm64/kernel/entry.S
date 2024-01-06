@@ -35,6 +35,10 @@
 	.endr
 	.endm
 
+#ifdef CONFIG_SEC_DEBUG_EXCEPTION_STACK
+#define PRESERVE_STACK_SIZE	256
+#endif
+
 	.macro kernel_ventry, el:req, ht:req, regsize:req, label:req
 	.align 7
 .Lventry_start\@:
@@ -53,7 +57,15 @@
 .Lskip_tramp_vectors_cleanup\@:
 	.endif
 
+#ifdef CONFIG_SEC_DEBUG_EXCEPTION_STACK
+	.if	\el == 0
 	sub	sp, sp, #PT_REGS_SIZE
+	.else
+	sub	sp, sp, #(PT_REGS_SIZE+PRESERVE_STACK_SIZE)
+	.endif /* \el == 0 */
+#else
+	sub	sp, sp, #PT_REGS_SIZE
+#endif
 #ifdef CONFIG_VMAP_STACK
 	/*
 	 * Test whether the SP has overflowed, without corrupting a GPR.
@@ -274,7 +286,11 @@ alternative_else_nop_endif
 
 	scs_load tsk
 	.else
+#ifdef CONFIG_SEC_DEBUG_EXCEPTION_STACK
+	add	x21, sp, #(PT_REGS_SIZE+PRESERVE_STACK_SIZE)
+#else
 	add	x21, sp, #PT_REGS_SIZE
+#endif
 	get_current_task tsk
 	.endif /* \el == 0 */
 	mrs	x22, elr_el1
@@ -438,7 +454,11 @@ alternative_else_nop_endif
 #endif
 	.else
 	ldr	lr, [sp, #S_LR]
+#ifdef CONFIG_SEC_DEBUG_EXCEPTION_STACK
+	add	sp, sp, #(PT_REGS_SIZE+PRESERVE_STACK_SIZE)
+#else
 	add	sp, sp, #PT_REGS_SIZE		// restore sp
+#endif
 
 	/* Ensure any device/NC reads complete */
 	alternative_insn nop, "dmb sy", ARM64_WORKAROUND_1508412
@@ -542,7 +562,11 @@ SYM_CODE_START_LOCAL(__bad_stack)
 	sub	sp, sp, #PT_REGS_SIZE
 	kernel_entry 1
 	mrs	x0, tpidr_el0
+#ifdef CONFIG_SEC_DEBUG_EXCEPTION_STACK
+	add	x0, x0, #(PT_REGS_SIZE+PRESERVE_STACK_SIZE)
+#else
 	add	x0, x0, #PT_REGS_SIZE
+#endif
 	str	x0, [sp, #S_SP]
 
 	/* Stash the regs for handle_bad_stack */

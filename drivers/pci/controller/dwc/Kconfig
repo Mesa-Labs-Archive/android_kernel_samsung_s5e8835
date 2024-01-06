@@ -93,6 +93,19 @@ config PCI_EXYNOS
 	  hardware and therefore the driver re-uses the DesignWare core
 	  functions to implement the driver.
 
+config PCI_EXYNOS_PHYCAL
+	tristate "Samsung Exynos PCIe PHY controller"
+	depends on ARCH_EXYNOS || COMPILE_TEST
+	depends on PCI_MSI_IRQ_DOMAIN
+	select PCIE_DW_HOST
+
+config PCI_EXYNOS_PHYCAL_DEBUG
+	tristate "Samsung Exynos PCIe PHY Debug feature"
+	depends on ARCH_EXYNOS || COMPILE_TEST
+	depends on PCI_MSI_IRQ_DOMAIN
+	depends on PCI_EXYNOS_PHYCAL
+	select PCIE_DW_HOST
+
 config PCI_IMX6
 	bool "Freescale i.MX6/7/8 PCIe controller"
 	depends on ARCH_MXC || COMPILE_TEST

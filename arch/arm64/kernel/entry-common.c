@@ -25,6 +25,8 @@
 #include <asm/sysreg.h>
 #include <asm/system_misc.h>
 
+#include <linux/sec_debug.h>
+
 #include <trace/hooks/traps.h>
 
 /*
@@ -281,7 +283,7 @@ static void noinstr __panic_unhandled(struct pt_regs *regs, const char *vector,
 
 	console_verbose();
 
-	pr_crit("Unhandled %s exception on CPU%d, ESR 0x%08x -- %s\n",
+	pr_auto(ASL1, "Unhandled %s exception on CPU%d, ESR 0x%08x -- %s\n",
 		vector, smp_processor_id(), esr,
 		esr_get_class_string(esr));
 
@@ -802,6 +804,7 @@ asmlinkage void noinstr handle_bad_stack(struct pt_regs *regs)
 	unsigned int esr = read_sysreg(esr_el1);
 	unsigned long far = read_sysreg(far_el1);
 
+	secdbg_base_built_check_handle_bad_stack();
 	arm64_enter_nmi(regs);
 	panic_bad_stack(regs, esr, far);
 }

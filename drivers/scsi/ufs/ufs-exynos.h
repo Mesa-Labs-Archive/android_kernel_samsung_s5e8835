@@ -1,248 +1,259 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * UFS Host Controller driver for Exynos specific extensions
  *
- * Copyright (C) 2014-2015 Samsung Electronics Co., Ltd.
+ * Copyright (C) 2013-2014 Samsung Electronics Co., Ltd.
  *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  */
 
 #ifndef _UFS_EXYNOS_H_
 #define _UFS_EXYNOS_H_
 
-/*
- * UNIPRO registers
- */
-#define UNIPRO_DBG_FORCE_DME_CTRL_STATE		0x150
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS)
+#include <soc/samsung/exynos_pm_qos.h>
+#endif
+#include <linux/platform_device.h>
 
-/*
- * MIBs for PA debug registers
- */
-#define PA_DBG_CLK_PERIOD	0x9514
-#define PA_DBG_TXPHY_CFGUPDT	0x9518
-#define PA_DBG_RXPHY_CFGUPDT	0x9519
-#define PA_DBG_MODE		0x9529
-#define PA_DBG_SKIP_RESET_PHY	0x9539
-#define PA_DBG_OV_TM		0x9540
-#define PA_DBG_SKIP_LINE_RESET	0x9541
-#define PA_DBG_LINE_RESET_REQ	0x9543
-#define PA_DBG_OPTION_SUITE	0x9564
-#define PA_DBG_OPTION_SUITE_DYN	0x9565
+#if IS_ENABLED(CONFIG_EXYNOS_ITMON)
+#include <soc/samsung/exynos-itmon.h>
+#endif
 
-/*
- * MIBs for Transport Layer debug registers
- */
-#define T_DBG_SKIP_INIT_HIBERN8_EXIT	0xc001
+#define EOM_DEF_VREF_MAX	256
 
-/*
- * Exynos MPHY attributes
- */
-#define TX_LINERESET_N_VAL	0x0277
-#define TX_LINERESET_N(v)	(((v) >> 10) & 0xFF)
-#define TX_LINERESET_P_VAL	0x027D
-#define TX_LINERESET_P(v)	(((v) >> 12) & 0xFF)
-#define TX_OV_SLEEP_CNT_TIMER	0x028E
-#define TX_OV_H8_ENTER_EN	(1 << 7)
-#define TX_OV_SLEEP_CNT(v)	(((v) >> 5) & 0x7F)
-#define TX_HIGH_Z_CNT_11_08	0x028C
-#define TX_HIGH_Z_CNT_H(v)	(((v) >> 8) & 0xF)
-#define TX_HIGH_Z_CNT_07_00	0x028D
-#define TX_HIGH_Z_CNT_L(v)	((v) & 0xFF)
-#define TX_BASE_NVAL_07_00	0x0293
-#define TX_BASE_NVAL_L(v)	((v) & 0xFF)
-#define TX_BASE_NVAL_15_08	0x0294
-#define TX_BASE_NVAL_H(v)	(((v) >> 8) & 0xFF)
-#define TX_GRAN_NVAL_07_00	0x0295
-#define TX_GRAN_NVAL_L(v)	((v) & 0xFF)
-#define TX_GRAN_NVAL_10_08	0x0296
-#define TX_GRAN_NVAL_H(v)	(((v) >> 8) & 0x3)
+#define H8T_GRANULARITY		100
 
-#define RX_FILLER_ENABLE	0x0316
-#define RX_FILLER_EN		(1 << 1)
-#define RX_LINERESET_VAL	0x0317
-#define RX_LINERESET(v)	(((v) >> 12) & 0xFF)
-#define RX_LCC_IGNORE		0x0318
-#define RX_SYNC_MASK_LENGTH	0x0321
-#define RX_HIBERN8_WAIT_VAL_BIT_20_16	0x0331
-#define RX_HIBERN8_WAIT_VAL_BIT_15_08	0x0332
-#define RX_HIBERN8_WAIT_VAL_BIT_07_00	0x0333
-#define RX_OV_SLEEP_CNT_TIMER	0x0340
-#define RX_OV_SLEEP_CNT(v)	(((v) >> 6) & 0x1F)
-#define RX_OV_STALL_CNT_TIMER	0x0341
-#define RX_OV_STALL_CNT(v)	(((v) >> 4) & 0xFF)
-#define RX_BASE_NVAL_07_00	0x0355
-#define RX_BASE_NVAL_L(v)	((v) & 0xFF)
-#define RX_BASE_NVAL_15_08	0x0354
-#define RX_BASE_NVAL_H(v)	(((v) >> 8) & 0xFF)
-#define RX_GRAN_NVAL_07_00	0x0353
-#define RX_GRAN_NVAL_L(v)	((v) & 0xFF)
-#define RX_GRAN_NVAL_10_08	0x0352
-#define RX_GRAN_NVAL_H(v)	(((v) >> 8) & 0x3)
+#define EXYNOS_PHY_BIAS		0x1000C30C
 
-#define CMN_PWM_CLK_CTRL	0x0402
-#define PWM_CLK_CTRL_MASK	0x3
+/* For Pad retention */
+#define PMU_TOP_OUT		0x3B20
+#define PAD_RTO_UFS_EMBD	0x40000
 
-#define IATOVAL_NSEC		20000	/* unit: ns */
-#define UNIPRO_PCLK_PERIOD(ufs) (NSEC_PER_SEC / ufs->pclk_rate)
+#define PMU_UFS_OUT		0x1FA0
+#define IP_INISO_PHY		0x8000
 
-struct exynos_ufs;
+/* inject an error to RX */
+#define BIT_POS_DBG_DL_RX_INFO_TYPE	18
+#define BIT_POS_DBG_DL_RX_INFO_FORCE	(1 << 28)
+#define RX_BUFFER_OVERFLOW		(1 << 15)
+#define DL_RX_INFO_TYPE_ERROR_DETECTED  (21 << BIT_POS_DBG_DL_RX_INFO_TYPE)
 
-/* vendor specific pre-defined parameters */
-#define SLOW 1
-#define FAST 2
-
-#define RX_ADV_FINE_GRAN_SUP_EN	0x1
-#define RX_ADV_FINE_GRAN_STEP_VAL	0x3
-#define RX_ADV_MIN_ACTV_TIME_CAP	0x9
-
-#define PA_GRANULARITY_VAL	0x6
-#define PA_TACTIVATE_VAL	0x3
-#define PA_HIBERN8TIME_VAL	0x20
-
-#define PCLK_AVAIL_MIN	70000000
-#define PCLK_AVAIL_MAX	133000000
-
-struct exynos_ufs_uic_attr {
-	/* TX Attributes */
-	unsigned int tx_trailingclks;
-	unsigned int tx_dif_p_nsec;
-	unsigned int tx_dif_n_nsec;
-	unsigned int tx_high_z_cnt_nsec;
-	unsigned int tx_base_unit_nsec;
-	unsigned int tx_gran_unit_nsec;
-	unsigned int tx_sleep_cnt;
-	unsigned int tx_min_activatetime;
-	/* RX Attributes */
-	unsigned int rx_filler_enable;
-	unsigned int rx_dif_p_nsec;
-	unsigned int rx_hibern8_wait_nsec;
-	unsigned int rx_base_unit_nsec;
-	unsigned int rx_gran_unit_nsec;
-	unsigned int rx_sleep_cnt;
-	unsigned int rx_stall_cnt;
-	unsigned int rx_hs_g1_sync_len_cap;
-	unsigned int rx_hs_g2_sync_len_cap;
-	unsigned int rx_hs_g3_sync_len_cap;
-	unsigned int rx_hs_g1_prep_sync_len_cap;
-	unsigned int rx_hs_g2_prep_sync_len_cap;
-	unsigned int rx_hs_g3_prep_sync_len_cap;
-	/* Common Attributes */
-	unsigned int cmn_pwm_clk_ctrl;
-	/* Internal Attributes */
-	unsigned int pa_dbg_option_suite;
-	/* Changeable Attributes */
-	unsigned int rx_adv_fine_gran_sup_en;
-	unsigned int rx_adv_fine_gran_step;
-	unsigned int rx_min_actv_time_cap;
-	unsigned int rx_hibern8_time_cap;
-	unsigned int rx_adv_min_actv_time_cap;
-	unsigned int rx_adv_hibern8_time_cap;
-	unsigned int pa_granularity;
-	unsigned int pa_tactivate;
-	unsigned int pa_hibern8time;
+struct ext_cxt {
+	u32 offset;
+	u32 mask;
+	u32 val;
 };
 
-struct exynos_ufs_drv_data {
-	char *compatible;
-	struct exynos_ufs_uic_attr *uic_attr;
-	unsigned int quirks;
-	unsigned int opts;
-	/* SoC's specific operations */
-	int (*drv_init)(struct device *dev, struct exynos_ufs *ufs);
-	int (*pre_link)(struct exynos_ufs *ufs);
-	int (*post_link)(struct exynos_ufs *ufs);
-	int (*pre_pwr_change)(struct exynos_ufs *ufs,
-				struct ufs_pa_layer_attr *pwr);
-	int (*post_pwr_change)(struct exynos_ufs *ufs,
-				struct ufs_pa_layer_attr *pwr);
-};
+/*
+ * H_UTP_BOOST and H_FATAL_ERR arn't in here because they were just
+ * defined to enable some callback functions explanation.
+ */
+typedef enum {
+	H_DISABLED = 0,
+	H_RESET = 1,
+	H_LINK_UP = 2,
+	H_LINK_BOOST = 3,
+	H_TM_BUSY = 4,
+	H_REQ_BUSY = 5,
+	H_HIBERN8 = 6,
+	H_SUSPEND = 7,
+} exynos_host_state;
 
-struct ufs_phy_time_cfg {
-	u32 tx_linereset_p;
-	u32 tx_linereset_n;
-	u32 tx_high_z_cnt;
-	u32 tx_base_n_val;
-	u32 tx_gran_n_val;
-	u32 tx_sleep_cnt;
-	u32 rx_linereset;
-	u32 rx_hibern8_wait;
-	u32 rx_base_n_val;
-	u32 rx_gran_n_val;
-	u32 rx_sleep_cnt;
-	u32 rx_stall_cnt;
-};
+typedef enum {
+	C_OFF = 0,
+	C_ON,
+} exynos_clk_state;
+
+typedef enum {
+	UFS_S_PARAM_EOM_VER = 0,
+	UFS_S_PARAM_EOM_SZ,
+	UFS_S_PARAM_EOM_OFS,
+	UFS_S_PARAM_LANE,
+	UFS_S_PARAM_H8_D_MS,
+	UFS_S_PARAM_MON,
+	UFS_S_PARAM_NUM,
+} exynos_ufs_param_id;
+
+typedef enum {
+	UFS_STATE_AH8,
+	UFS_STATE_IDLE,
+} exynos_ufs_ah8_state;
 
 struct exynos_ufs {
+	struct device *dev;
 	struct ufs_hba *hba;
-	struct phy *phy;
-	void __iomem *reg_hci;
-	void __iomem *reg_unipro;
-	void __iomem *reg_ufsp;
-	struct clk *clk_hci_core;
-	struct clk *clk_unipro_main;
-	struct clk *clk_apb;
-	u32 pclk_rate;
-	u32 pclk_div;
-	u32 pclk_avail_min;
-	u32 pclk_avail_max;
-	unsigned long mclk_rate;
-	int avail_ln_rx;
-	int avail_ln_tx;
-	int rx_sel_idx;
-	struct ufs_pa_layer_attr dev_req_params;
-	struct ufs_phy_time_cfg t_cfg;
-	ktime_t entry_hibern8_t;
-	struct exynos_ufs_drv_data *drv_data;
 
-	u32 opts;
-#define EXYNOS_UFS_OPT_HAS_APB_CLK_CTRL		BIT(0)
-#define EXYNOS_UFS_OPT_SKIP_CONNECTION_ESTAB	BIT(1)
-#define EXYNOS_UFS_OPT_BROKEN_AUTO_CLK_CTRL	BIT(2)
-#define EXYNOS_UFS_OPT_BROKEN_RX_SEL_IDX	BIT(3)
-#define EXYNOS_UFS_OPT_USE_SW_HIBERN8_TIMER	BIT(4)
+	/*
+	 * Do not change the order of iomem variables.
+	 * Standard HCI regision is populated in core driver.
+	 */
+	void __iomem *reg_hci;			/* exynos-specific hci */
+	void __iomem *reg_unipro;		/* unipro */
+	void __iomem *reg_ufsp;			/* ufs protector */
+	void __iomem *reg_phy;			/* phy */
+	void __iomem *reg_cport;		/* cport */
+	void __iomem *reg_pcs;			/* pcs */
+#define NUM_OF_UFS_MMIO_REGIONS 6
+
+	/*
+	 * Do not change the order of remap variables.
+	 */
+	struct regmap *regmap_sys;		/* io coherency */
+	struct ext_cxt cxt_phy_iso;
+	struct ext_cxt cxt_iocc;
+	struct ext_cxt cxt_pad_ret;
+	bool is_dma_coherent;
+
+	/*
+	 * Do not change the order of clock variables
+	 */
+	struct clk *clk_hci;
+	struct clk *clk_unipro;
+	u32 mclk_gear5;
+	u32 freq_for_1us_cntval;
+
+	/* exynos specific state */
+	exynos_host_state h_state;
+	exynos_host_state h_state_prev;
+	exynos_clk_state c_state;
+
+	unsigned long mclk_rate;
+
+	int num_rx_lanes;
+	int num_tx_lanes;
+
+	struct uic_pwr_mode hci_pmd_parm;
+	struct uic_pwr_mode device_pmd_parm;
+
+	/* Support system power mode */
+	int idle_ip_index;
+
+	/* PM QoS for stability, not for performance */
+#if IS_ENABLED(CONFIG_EXYNOS_PM_QOS)
+	struct exynos_pm_qos_request	pm_qos_int;
+#endif
+	s32			pm_qos_int_value;
+	s32			pm_qos_gear5_int;
+
+	/* cal */
+	struct ufs_cal_param	cal_param;
+
+	/* performance */
+	void *perf;
+	struct ufs_vs_handle handle;
+
+	u32 available_lane_rx;
+	u32 available_lane_tx;
+
+	/*
+	 * This variable is to make UFS driver's operations change
+	 * for specific purposes, e.g. unit test cases, or report
+	 * some information to user land.
+	 */
+	u32 params[UFS_S_PARAM_NUM];
+
+	/* sysfs */
+	struct kobject sysfs_kobj;
+
+	/* async resume */
+	struct work_struct resume_work;
+
+	u32 ah8_ahit;
+
+	u32 hibern8_state;
+	u32 hibern8_enter_cnt;
+	u32 hibern8_exit_cnt;
+
+	/* value 1 whenever resuming, and then we can deal with
+	   UAC(Unit Attention Condition). */
+	u32 resume_state;
+
+	/* As pmic ldo drop rate is slow, need to track of
+	   device LDO off timestamp */
+	s64 vcc_off_time;
+
+	/* This variable is for featuring hw functionality */
+	void *fmp;
+
+	/* flag for runtime */
+	unsigned long flag;
+#define EXYNOS_UFS_BIT_DBG_DUMP			(0)
+#define EXYNOS_UFS_BIT_CHK_NEXUS		(1)
+
+	/* cache of hardware contents */
+	unsigned long nexus;
+
+	bool always_on;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *ufs_stat_wakeup;
+	struct pinctrl_state *ufs_stat_sleep;
+
+#if IS_ENABLED(CONFIG_EXYNOS_ITMON)
+	struct notifier_block itmon_nb;
+#endif
+	bool skip_flush;
+	bool deep_suspended;
 };
 
-#define for_each_ufs_rx_lane(ufs, i) \
-	for (i = (ufs)->rx_sel_idx; \
-		i < (ufs)->rx_sel_idx + (ufs)->avail_ln_rx; i++)
-#define for_each_ufs_tx_lane(ufs, i) \
-	for (i = 0; i < (ufs)->avail_ln_tx; i++)
-
-#define EXYNOS_UFS_MMIO_FUNC(name)					  \
-static inline void name##_writel(struct exynos_ufs *ufs, u32 val, u32 reg)\
-{									  \
-	writel(val, ufs->reg_##name + reg);				  \
-}									  \
-									  \
-static inline u32 name##_readl(struct exynos_ufs *ufs, u32 reg)		  \
-{									  \
-	return readl(ufs->reg_##name + reg);				  \
-}
-
-EXYNOS_UFS_MMIO_FUNC(hci);
-EXYNOS_UFS_MMIO_FUNC(unipro);
-EXYNOS_UFS_MMIO_FUNC(ufsp);
-#undef EXYNOS_UFS_MMIO_FUNC
-
-long exynos_ufs_calc_time_cntr(struct exynos_ufs *, long);
-
-static inline void exynos_ufs_enable_ov_tm(struct ufs_hba *hba)
+static inline struct exynos_ufs *to_exynos_ufs(struct ufs_hba *hba)
 {
-	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_DBG_OV_TM), TRUE);
+	return dev_get_platdata(hba->dev);
 }
 
-static inline void exynos_ufs_disable_ov_tm(struct ufs_hba *hba)
+static inline u32 __get_upmcrs(struct exynos_ufs *ufs)
 {
-	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_DBG_OV_TM), FALSE);
+	return (std_readl(&ufs->handle, REG_CONTROLLER_STATUS) >> 8) & 0x7;
 }
 
-static inline void exynos_ufs_enable_dbg_mode(struct ufs_hba *hba)
+int exynos_ufs_init_dbg(struct ufs_vs_handle *);
+int exynos_ufs_dbg_set_lanes(struct ufs_vs_handle *,
+				struct device *dev, u32);
+void exynos_ufs_dump_info(struct ufs_hba *, struct ufs_vs_handle *,
+			  struct device *dev);
+void exynos_ufs_cmd_log_start(struct ufs_vs_handle *,
+				struct ufs_hba *, struct scsi_cmnd *);
+void exynos_ufs_cmd_log_end(struct ufs_vs_handle *,
+				struct ufs_hba *hba, int tag);
+
+#ifdef CONFIG_SCSI_UFS_EXYNOS_FMP
+void exynos_ufs_fmp_init(struct ufs_hba *hba);
+void exynos_ufs_fmp_resume(struct ufs_hba *hba);
+void exynos_ufs_fmp_enable(struct ufs_hba *hba);
+#ifdef CONFIG_KEYS_IN_CUSTOM_KEYSLOT
+int exynos_ufs_fmp_program_key(struct ufs_hba *hba,
+				const union ufs_crypto_cfg_entry *cfg, int slot);
+#else
+#define exynos_ufs_fmp_program_key NULL
+#endif
+#else  /* !CONFIG_SCSI_UFS_EXYNOS_FMP */
+static inline void exynos_ufs_fmp_init(struct ufs_hba *hba)
 {
-	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_DBG_MODE), TRUE);
 }
-
-static inline void exynos_ufs_disable_dbg_mode(struct ufs_hba *hba)
+static inline void exynos_ufs_fmp_resume(struct ufs_hba *hba)
 {
-	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_DBG_MODE), FALSE);
 }
+static inline void exynos_ufs_fmp_enable(struct ufs_hba *hba)
+{
+}
+#define exynos_ufs_fmp_program_key NULL
+#endif /* ONFIG_SCSI_UFS_EXYNOS_FMP */
 
+#if IS_ENABLED(CONFIG_SCSI_UFS_EXYNOS_SRPMB)
+int exynos_ufs_srpmb_config(struct ufs_hba *hba);
+struct scsi_device *exynos_ufs_srpmb_sdev(void);
+#else
+static inline int exynos_ufs_srpmb_config(struct ufs_hba *hba)
+{
+	return -1;
+}
+static inline struct scsi_device *exynos_ufs_srpmb_sdev(void)
+{
+	return NULL;
+}
+#endif
+int exynos_ufs_check_ah8_fsm_state(struct ufs_hba *hba, u32 state);
+int exynos_ufs_init_mem_log(struct platform_device *pdev);
+int ufs_call_cal(struct exynos_ufs *ufs, void *func);
 #endif /* _UFS_EXYNOS_H_ */

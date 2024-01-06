@@ -17,7 +17,12 @@
 #include "xhci.h"
 #include "xhci-trace.h"
 #include "xhci-debugfs.h"
-
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+#include "xhci-exynos-audio.h"
+#endif
+#if IS_ENABLED(CONFIG_USB_HOST_CERTIFICATION)
+#define MAX_HC_SLOT_LIMIT 15
+#endif
 /*
  * Allocates a generic ring segment from the ring pool, sets the dma address,
  * initializes the segment to zero, and sets the private next pointer to NULL.
@@ -65,7 +70,7 @@ static struct xhci_segment *xhci_segment_alloc(struct xhci_hcd *xhci,
 	return seg;
 }
 
-static void xhci_segment_free(struct xhci_hcd *xhci, struct xhci_segment *seg)
+void xhci_segment_free(struct xhci_hcd *xhci, struct xhci_segment *seg)
 {
 	if (seg->trbs) {
 		dma_pool_free(xhci->segment_pool, seg->trbs, seg->dma);
@@ -74,6 +79,7 @@ static void xhci_segment_free(struct xhci_hcd *xhci, struct xhci_segment *seg)
 	kfree(seg->bounce_buf);
 	kfree(seg);
 }
+EXPORT_SYMBOL_GPL(xhci_segment_free);
 
 static void xhci_free_segments_for_ring(struct xhci_hcd *xhci,
 				struct xhci_segment *first)
@@ -96,7 +102,7 @@ static void xhci_free_segments_for_ring(struct xhci_hcd *xhci,
  * DMA address of the next segment.  The caller needs to set any Link TRB
  * related flags, such as End TRB, Toggle Cycle, and no snoop.
  */
-static void xhci_link_segments(struct xhci_segment *prev,
+void xhci_link_segments(struct xhci_segment *prev,
 			       struct xhci_segment *next,
 			       enum xhci_ring_type type, bool chain_links)
 {
@@ -118,6 +124,7 @@ static void xhci_link_segments(struct xhci_segment *prev,
 		prev->trbs[TRBS_PER_SEGMENT-1].link.control = cpu_to_le32(val);
 	}
 }
+EXPORT_SYMBOL_GPL(xhci_link_segments);
 
 /*
  * Link the ring to the new segments.
@@ -256,7 +263,7 @@ remove_streams:
 	return ret;
 }
 
-static void xhci_remove_stream_mapping(struct xhci_ring *ring)
+void xhci_remove_stream_mapping(struct xhci_ring *ring)
 {
 	struct xhci_segment *seg;
 
@@ -269,6 +276,7 @@ static void xhci_remove_stream_mapping(struct xhci_ring *ring)
 		seg = seg->next;
 	} while (seg != ring->first_seg);
 }
+EXPORT_SYMBOL_GPL(xhci_remove_stream_mapping);
 
 static int xhci_update_stream_mapping(struct xhci_ring *ring, gfp_t mem_flags)
 {
@@ -362,6 +370,35 @@ static int xhci_alloc_segments_for_ring(struct xhci_hcd *xhci,
 	return 0;
 }
 
+static struct xhci_ring *xhci_vendor_alloc_transfer_ring(struct xhci_hcd *xhci,
+		u32 endpoint_type, enum xhci_ring_type ring_type,
+		unsigned int max_packet, gfp_t mem_flags)
+{
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+	return xhci_exynos_alloc_transfer_ring(xhci, endpoint_type, ring_type, max_packet, mem_flags);
+#else
+	return 0;
+#endif
+}
+
+void xhci_vendor_free_transfer_ring(struct xhci_hcd *xhci,
+		struct xhci_virt_device *virt_dev, unsigned int ep_index)
+{
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+	xhci_exynos_free_transfer_ring(xhci, virt_dev, ep_index);
+#endif
+}
+
+bool xhci_vendor_is_usb_offload_enabled(struct xhci_hcd *xhci,
+		struct xhci_virt_device *virt_dev, unsigned int ep_index)
+{
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+	return xhci_exynos_is_usb_offload_enabled(xhci, virt_dev, ep_index);
+#else
+	return false;
+#endif
+}
+
 /*
  * Create a new ring with zero or more segments.
  *
@@ -414,7 +451,11 @@ void xhci_free_endpoint_ring(struct xhci_hcd *xhci,
 		struct xhci_virt_device *virt_dev,
 		unsigned int ep_index)
 {
+	if (xhci_vendor_is_usb_offload_enabled(xhci, virt_dev, ep_index))
+		xhci_vendor_free_transfer_ring(xhci, virt_dev, ep_index);
+	else
 	xhci_ring_free(xhci, virt_dev->eps[ep_index].ring);
+
 	virt_dev->eps[ep_index].ring = NULL;
 }
 
@@ -486,7 +527,11 @@ struct xhci_container_ctx *xhci_alloc_container_ctx(struct xhci_hcd *xhci,
 	if (type == XHCI_CTX_TYPE_INPUT)
 		ctx->size += CTX_SIZE(xhci->hcc_params);
 
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+	xhci_exynos_alloc_container_ctx(xhci, ctx, type, flags);
+#else
 	ctx->bytes = dma_pool_zalloc(xhci->device_pool, flags, &ctx->dma);
+#endif
 	if (!ctx->bytes) {
 		kfree(ctx);
 		return NULL;
@@ -499,7 +544,13 @@ void xhci_free_container_ctx(struct xhci_hcd *xhci,
 {
 	if (!ctx)
 		return;
+
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+	xhci_exynos_free_container_ctx(xhci, ctx);
+#else
 	dma_pool_free(xhci->device_pool, ctx->bytes, ctx->dma);
+#endif
+
 	kfree(ctx);
 }
 
@@ -1498,8 +1549,16 @@ int xhci_endpoint_init(struct xhci_hcd *xhci,
 		mult = 0;
 
 	/* Set up the endpoint ring */
+	if (xhci_vendor_is_usb_offload_enabled(xhci, virt_dev, ep_index) &&
+	    usb_endpoint_xfer_isoc(&ep->desc)) {
 	virt_dev->eps[ep_index].new_ring =
+			xhci_vendor_alloc_transfer_ring(xhci, endpoint_type, ring_type,
+							max_packet, mem_flags);
+	} else {
+		virt_dev->eps[ep_index].new_ring =
 		xhci_ring_alloc(xhci, 2, 1, ring_type, max_packet, mem_flags);
+	}
+
 	if (!virt_dev->eps[ep_index].new_ring)
 		return -ENOMEM;
 
@@ -1847,6 +1906,23 @@ void xhci_free_erst(struct xhci_hcd *xhci, struct xhci_erst *erst)
 }
 EXPORT_SYMBOL_GPL(xhci_free_erst);
 
+static struct xhci_device_context_array *xhci_vendor_alloc_dcbaa(
+		struct xhci_hcd *xhci, gfp_t flags)
+{
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+	return xhci_exynos_alloc_dcbaa(xhci, flags);
+#else
+	return 0;
+#endif
+}
+
+static void xhci_vendor_free_dcbaa(struct xhci_hcd *xhci)
+{
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+	xhci_exynos_free_dcbaa(xhci);
+#endif
+}
+
 void xhci_mem_cleanup(struct xhci_hcd *xhci)
 {
 	struct device	*dev = xhci_to_hcd(xhci)->self.sysdev;
@@ -1901,9 +1977,13 @@ void xhci_mem_cleanup(struct xhci_hcd *xhci)
 	xhci_dbg_trace(xhci, trace_xhci_dbg_init,
 			"Freed medium stream array pool");
 
+	if (xhci_vendor_is_usb_offload_enabled(xhci, NULL, 0)) {
+		xhci_vendor_free_dcbaa(xhci);
+	} else {
 	if (xhci->dcbaa)
 		dma_free_coherent(dev, sizeof(*xhci->dcbaa),
 				xhci->dcbaa, xhci->dcbaa->dma);
+	}
 	xhci->dcbaa = NULL;
 
 	scratchpad_free(xhci);
@@ -1984,7 +2064,7 @@ static int xhci_test_trb_in_td(struct xhci_hcd *xhci,
 }
 
 /* TRB math checks for xhci_trb_in_td(), using the command and event rings. */
-static int xhci_check_trb_in_td_math(struct xhci_hcd *xhci)
+int xhci_check_trb_in_td_math(struct xhci_hcd *xhci)
 {
 	struct {
 		dma_addr_t		input_dma;
@@ -2104,6 +2184,7 @@ static int xhci_check_trb_in_td_math(struct xhci_hcd *xhci)
 	xhci_dbg(xhci, "TRB math tests passed.\n");
 	return 0;
 }
+EXPORT_SYMBOL_GPL(xhci_check_trb_in_td_math);
 
 static void xhci_set_hc_event_deq(struct xhci_hcd *xhci)
 {
@@ -2402,6 +2483,8 @@ int xhci_mem_init(struct xhci_hcd *xhci, gfp_t flags)
 	int		i, ret;
 
 	INIT_LIST_HEAD(&xhci->cmd_list);
+	pr_info("%s: set uram!\n", __func__);
+	xhci->quirks |= XHCI_USE_URAM_FOR_EXYNOS_AUDIO;
 
 	/* init command timeout work */
 	INIT_DELAYED_WORK(&xhci->cmd_timer, xhci_handle_command_timeout);
@@ -2443,15 +2526,21 @@ int xhci_mem_init(struct xhci_hcd *xhci, gfp_t flags)
 	 * xHCI section 5.4.6 - doorbell array must be
 	 * "physically contiguous and 64-byte (cache line) aligned".
 	 */
+	if (xhci_vendor_is_usb_offload_enabled(xhci, NULL, 0)) {
+		xhci->dcbaa = xhci_vendor_alloc_dcbaa(xhci, flags);
+		if (!xhci->dcbaa)
+			goto fail;
+	} else {
 	xhci->dcbaa = dma_alloc_coherent(dev, sizeof(*xhci->dcbaa), &dma,
 			flags);
 	if (!xhci->dcbaa)
 		goto fail;
 	xhci->dcbaa->dma = dma;
+	}
 	xhci_dbg_trace(xhci, trace_xhci_dbg_init,
 			"// Device context base array address = 0x%llx (DMA), %p (virt)",
 			(unsigned long long)xhci->dcbaa->dma, xhci->dcbaa);
-	xhci_write_64(xhci, dma, &xhci->op_regs->dcbaa_ptr);
+	xhci_write_64(xhci, xhci->dcbaa->dma, &xhci->op_regs->dcbaa_ptr);
 
 	/*
 	 * Initialize the ring segment pool.  The ring must be a contiguous
@@ -2594,6 +2683,10 @@ int xhci_mem_init(struct xhci_hcd *xhci, gfp_t flags)
 	temp |= DEV_NOTE_FWAKE;
 	writel(temp, &xhci->op_regs->dev_notification);
 
+#ifdef CONFIG_USB_XHCI_EXYNOS_AUDIO
+	xhci_exynos_alloc_event_ring(xhci, GFP_KERNEL);
+	xhci_exynos_enable_event_ring(xhci);
+#endif
 	return 0;
 
 fail:

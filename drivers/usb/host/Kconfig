@@ -27,6 +27,7 @@ config USB_XHCI_HCD
 	  To compile this driver as a module, choose M here: the
 	  module will be called xhci-hcd.
 
+
 if USB_XHCI_HCD
 config USB_XHCI_DBGCAP
 	bool "xHCI support for debug capability"
@@ -103,6 +104,18 @@ config USB_XHCI_TEGRA
 	help
 	  Say 'Y' to enable the support for the xHCI host controller
 	  found in NVIDIA Tegra124 and later SoCs.
+
+config USB_XHCI_EXYNOS
+	tristate "xHCI support for EXYNOS SoCs"
+	help
+	  Say 'Y' to enable the support for the xHCI host controller
+	  found in Exynos SoCs.
+
+config USB_XHCI_EXYNOS_AUDIO
+	bool "xHCI support for usb audio offload"
+	help
+	  Say 'Y' to enable the support for the xHCI host usb audio offload
+	  in Exynos SoCs.
 
 endif # USB_XHCI_HCD
 

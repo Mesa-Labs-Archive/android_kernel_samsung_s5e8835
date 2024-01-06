@@ -81,11 +81,10 @@ static int ttm_global_init(void)
 		ttm_debugfs_root = NULL;
 	}
 
-	/* Limit the number of pages in the pool to about 50% of the total
+	/* Use the number of pages in the pool to about the total
 	 * system memory.
 	 */
 	num_pages = ((u64)si.totalram * si.mem_unit) >> PAGE_SHIFT;
-	num_pages /= 2;
 
 	/* But for DMA32 we limit ourself to only use 2GiB maximum. */
 	num_dma32 = (u64)(si.totalram - si.totalhigh) * si.mem_unit

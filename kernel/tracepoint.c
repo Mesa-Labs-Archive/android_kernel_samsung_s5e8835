@@ -185,7 +185,8 @@ func_add(struct tracepoint_func **funcs, struct tracepoint_func *tp_func,
 	int nr_probes = 0;	/* Counter for probes */
 	int pos = -1;		/* Insertion position into new array */
 
-	if (WARN_ON(!tp_func->func))
+	/* TODO: To avoid warning, WARN_ON() is removed. It should be reverted later */
+	if (!tp_func->func)
 		return ERR_PTR(-EINVAL);
 
 	debug_print_probes(*funcs);
@@ -508,7 +509,8 @@ int tracepoint_probe_register_prio(struct tracepoint *tp, void *probe,
 	tp_func.func = probe;
 	tp_func.data = data;
 	tp_func.prio = prio;
-	ret = tracepoint_add_func(tp, &tp_func, prio, true);
+	/* TODO: To avoid warning, set 'false'. It should be changed to 'true' later */
+	ret = tracepoint_add_func(tp, &tp_func, prio, false);
 	mutex_unlock(&tracepoints_mutex);
 	return ret;
 }

@@ -843,6 +843,18 @@ config LEDS_LM36274
 	  Say Y to enable the LM36274 LED driver for TI LMU devices.
 	  This supports the LED device LM36274.
 
+config LEDS_SM5714
+	tristate "LED support for the SM5714"
+	depends on MFD_SM5714
+	help
+	  This option enables support for the LEDs on the SM5714.
+
+config LEDS_AW36518
+	tristate "LED support for the AW36518"
+	depends on I2C
+	help
+	  This option enables support for the LEDs on the AW36518.
+
 config LEDS_TPS6105X
 	tristate "LED support for TI TPS6105X"
 	depends on LEDS_CLASS
@@ -872,6 +884,7 @@ config LEDS_ACER_A500
 	  Acer Iconia Tab A500.
 
 source "drivers/leds/blink/Kconfig"
+source "drivers/leds/samsung/Kconfig"
 
 comment "Flash and Torch LED drivers"
 source "drivers/leds/flash/Kconfig"

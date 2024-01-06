@@ -1,3 +1,4 @@
+
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
  * This file holds the definitions of quirks found in USB devices.
@@ -72,4 +73,6 @@
 /* device has endpoints that should be ignored */
 #define USB_QUIRK_ENDPOINT_IGNORE		BIT(15)
 
+/* Hub can't support usb suspend */
+#define USB_QUIRK_HUB_NO_SUSPEND		BIT(20)
 #endif /* __LINUX_USB_QUIRKS_H */

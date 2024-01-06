@@ -12,13 +12,17 @@
 #include <linux/slab.h>
 #include <asm/unaligned.h>
 #include <linux/bitfield.h>
+#include <linux/phy/phy.h>
 
 #include "xhci.h"
 #include "xhci-trace.h"
+#include "xhci-exynos-audio.h"
 
 #define	PORT_WAKE_BITS	(PORT_WKOC_E | PORT_WKDISC_E | PORT_WKCONN_E)
 #define	PORT_RWC_BITS	(PORT_CSC | PORT_PEC | PORT_WRC | PORT_OCC | \
 			 PORT_RC | PORT_PLC | PORT_PE)
+
+extern struct xhci_exynos_audio *g_xhci_exynos_audio;
 
 /* Default sublink speed attribute of each lane */
 static u32 ssp_cap_default_ssa[] = {
@@ -1677,6 +1681,7 @@ int xhci_hub_status_data(struct usb_hcd *hcd, char *buf)
 		clear_bit(HCD_FLAG_POLL_RH, &hcd->flags);
 	}
 	spin_unlock_irqrestore(&xhci->lock, flags);
+
 	return status ? retval : 0;
 }
 
@@ -1692,6 +1697,7 @@ int xhci_bus_suspend(struct usb_hcd *hcd)
 	struct xhci_port **ports;
 	u32 portsc_buf[USB_MAXCHILDREN];
 	bool wake_enabled;
+	int main_hcd;
 
 	rhub = xhci_get_rhub(hcd);
 	ports = rhub->ports;
@@ -1810,6 +1816,16 @@ retry:
 	if (bus_state->bus_suspended)
 		usleep_range(5000, 10000);
 
+	if (hcd == xhci->main_hcd)
+		main_hcd = 1;
+	else
+		main_hcd = 0;
+
+	pr_info("%s\n", __func__);
+	if (!(xhci->xhc_state & XHCI_STATE_REMOVING))
+		phy_set_mode_ext(g_xhci_exynos_audio->phy,
+				 PHY_MODE_BUS_SUSPEND, main_hcd);
+
 	return 0;
 }
 
@@ -1853,6 +1869,7 @@ int xhci_bus_resume(struct usb_hcd *hcd)
 	u32 temp, portsc;
 	struct xhci_hub *rhub;
 	struct xhci_port **ports;
+	int main_hcd;
 
 	rhub = xhci_get_rhub(hcd);
 	ports = rhub->ports;
@@ -1954,6 +1971,17 @@ int xhci_bus_resume(struct usb_hcd *hcd)
 	temp = readl(&xhci->op_regs->command);
 
 	spin_unlock_irqrestore(&xhci->lock, flags);
+
+	if (hcd == xhci->main_hcd)
+		main_hcd = 1;
+	else
+		main_hcd = 0;
+
+	pr_info("%s\n", __func__);
+	if (!(xhci->xhc_state & XHCI_STATE_REMOVING))
+		phy_set_mode_ext(g_xhci_exynos_audio->phy,
+				 PHY_MODE_BUS_RESUME, main_hcd);
+
 	return 0;
 }
 

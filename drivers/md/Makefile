@@ -24,7 +24,7 @@ dm-cache-smq-y	+= dm-cache-policy-smq.o
 dm-ebs-y	+= dm-ebs-target.o
 dm-era-y	+= dm-era-target.o
 dm-clone-y	+= dm-clone-target.o dm-clone-metadata.o
-dm-verity-y	+= dm-verity-target.o
+dm-verity-y	+= dm-verity-target.o dm-verity-debug.o alta_bigdata.o
 dm-zoned-y	+= dm-zoned-target.o dm-zoned-metadata.o dm-zoned-reclaim.o
 
 md-mod-y	+= md.o md-bitmap.o
@@ -34,8 +34,8 @@ multipath-y	+= md-multipath.o
 faulty-y	+= md-faulty.o
 
 # Note: link order is important.  All raid personalities
-# and must come before md.o, as they each initialise 
-# themselves, and md.o may use the personalities when it 
+# and must come before md.o, as they each initialise
+# themselves, and md.o may use the personalities when it
 # auto-initialised.
 
 obj-$(CONFIG_MD_LINEAR)		+= linear.o

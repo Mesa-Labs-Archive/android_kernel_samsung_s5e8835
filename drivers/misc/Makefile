@@ -61,3 +61,15 @@ obj-$(CONFIG_HISI_HIKEY_USB)	+= hisi_hikey_usb.o
 obj-$(CONFIG_HI6421V600_IRQ)	+= hi6421v600-irq.o
 obj-$(CONFIG_UID_SYS_STATS)	+= uid_sys_stats.o
 obj-$(CONFIG_OPEN_DICE)		+= open-dice.o
+obj-y               += samsung/
+
+# TEEGRIS kernel driver
+ccflags-$(CONFIG_TZDEV) += -I$(srctree)/drivers/misc/tzdev/include
+obj-$(CONFIG_TZDEV)     += tzdev/
+obj-$(CONFIG_SAMSUNG_TUI)     += tui/
+
+#
+# Makefile for the Dev-Ril-Bridge driver
+#
+
+obj-$(CONFIG_DEV_RIL_BRIDGE) += dev_ril_bridge.o

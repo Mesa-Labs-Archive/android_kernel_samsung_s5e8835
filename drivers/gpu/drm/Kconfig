@@ -263,6 +263,8 @@ config DRM_AMDGPU
 
 source "drivers/gpu/drm/amd/amdgpu/Kconfig"
 
+source "drivers/gpu/drm/samsung/sgpu/Kconfig"
+
 source "drivers/gpu/drm/nouveau/Kconfig"
 
 source "drivers/gpu/drm/i915/Kconfig"
@@ -292,6 +294,8 @@ config DRM_VKMS
 	  If M is selected the module will be called vkms.
 
 source "drivers/gpu/drm/exynos/Kconfig"
+
+source "drivers/gpu/drm/samsung/dpu/Kconfig"
 
 source "drivers/gpu/drm/rockchip/Kconfig"
 
@@ -482,3 +486,5 @@ config DRM_PANEL_ORIENTATION_QUIRKS
 config DRM_LIB_RANDOM
 	bool
 	default n
+
+MCD_PANEL_PATH := drivers/gpu/drm/samsung/panel

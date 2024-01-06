@@ -788,4 +788,5 @@ config KEYBOARD_MTK_PMIC
 	  To compile this driver as a module, choose M here: the
 	  module will be called pmic-keys.
 
+source "drivers/input/keyboard/samsung/pmic/Kconfig"
 endif

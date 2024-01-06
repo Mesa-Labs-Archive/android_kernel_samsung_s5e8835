@@ -132,7 +132,7 @@ static void loop_global_unlock(struct loop_device *lo, bool global)
 		mutex_unlock(&loop_validate_mutex);
 }
 
-static int max_part;
+static int max_part = 7;
 static int part_shift;
 
 static int transfer_xor(struct loop_device *lo, int cmd,

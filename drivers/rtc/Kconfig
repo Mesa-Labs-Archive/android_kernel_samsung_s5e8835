@@ -719,7 +719,6 @@ config RTC_DRV_SD3078
 
 	  This driver can also be built as a module. If so, the module
 	  will be called rtc-sd3078
-
 endif # I2C
 
 comment "SPI RTC drivers"
@@ -1935,4 +1934,5 @@ config RTC_DRV_WILCO_EC
 	  This can also be built as a module. If so, the module will
 	  be named "rtc_wilco_ec".
 
+source "drivers/rtc/samsung/pmic/Kconfig"
 endif # RTC_CLASS

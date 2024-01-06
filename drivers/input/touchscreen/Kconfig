@@ -1366,4 +1366,10 @@ config TOUCHSCREEN_ZINITIX
 	  To compile this driver as a module, choose M here: the
 	  module will be called zinitix.
 
+# source "drivers/input/touchscreen/sec_ts/Kconfig"
+# source "drivers/input/touchscreen/novatek/nt36523_spi/Kconfig"
+
+if EXYNOS_VARIANT1
+source "drivers/input/touchscreen/Kconfig.variant1"
+endif
 endif

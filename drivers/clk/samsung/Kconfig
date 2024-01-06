@@ -12,6 +12,11 @@ config COMMON_CLK_SAMSUNG
 	select EXYNOS_5420_COMMON_CLK if ARM && SOC_EXYNOS5420
 	select EXYNOS_ARM64_COMMON_CLK if ARM64 && ARCH_EXYNOS
 
+config COMPOSITE_CLK_SAMSUNG
+	tristate "Samsung Exynos clock controller support"
+	select COMMON_CLK_SAMSUNG
+	depends on CAL_IF
+
 config S3C64XX_COMMON_CLK
 	bool "Samsung S3C64xx clock controller support" if COMPILE_TEST
 	depends on COMMON_CLK_SAMSUNG

@@ -97,6 +97,15 @@ config SCSI_UFS_DWC_TC_PLATFORM
 
 	  If unsure, say N.
 
+config SCSI_UFS_TEST_MODE
+	bool "Samsung UFS TEST feature"
+	depends on SCSI_UFSHCD && SCSI_UFSHCD_PLATFORM
+	help
+	  This selects support for test mode for debugging.
+	  Select this option if this feature is needed on working.
+
+	  If unsure, say N.
+
 config SCSI_UFS_QCOM
 	tristate "QCOM specific hooks to UFS controller platform driver"
 	depends on SCSI_UFSHCD_PLATFORM && ARCH_QCOM
@@ -175,6 +184,62 @@ config SCSI_UFS_EXYNOS
 	  Select this if you have UFS host controller on EXYNOS chipset.
 	  If unsure, say N.
 
+config SCSI_UFS_EXYNOS_DUMP_TO_CONSOLE
+	tristate "EXYNOS specific dump to console to UFS controller platform driver"
+	depends on SCSI_UFSHCD_PLATFORM && (ARCH_EXYNOS || COMPILE_TEST)
+	help
+	  This selects dumping and printing debuggin information of the EXYNOS
+	  specific additions to UFSHCD platform driver.
+
+	  Select this if you have UFS host controller on EXYNOS chipset.
+	  If unsure, say N.
+
+config SCSI_UFS_EXYNOS_SRPMB
+	bool "EXYNOS Secure RPMB(Replay Protected Memory Block) UFS Host"
+	depends on SCSI_UFS_EXYNOS && UFS_SRPMB
+	help
+	  RPMB(Replay Protected Memory Block) is a storage which is to store data
+	  to the specific memory area in an authenticated and replay protected manner.
+	  Usage of nonce and write count register are providing additional
+	  protection against replay of messages where messages could be recorded and
+	  played back later by an attacker.
+
+	  If you have a controller with this interface, say Y or M here. If unsure, say N.
+
+config SCSI_UFS_EXYNOS_FMP
+	bool "EXYNOS Flash Memory Protector for UFS Host"
+	depends on SCSI_UFS_EXYNOS && SCSI_UFS_CRYPTO
+	help
+	  This selects the EXYNOS UFS FMP Driver.
+
+	  Select this if you need a inline crypto engine for your UFS controller.
+	  If unsure, say N.
+
+choice
+	prompt "Option for FMP mode"
+	depends on SCSI_UFS_EXYNOS_FMP
+	default HW_KEYS_IN_CUSTOM_KEYSLOT
+
+config HW_KEYS_IN_CUSTOM_KEYSLOT
+	bool "Init fmp to use hw wrapped keys in custom keyslot"
+	depends on SCSI_UFS_EXYNOS_FMP
+	help
+	  Choose here to select that fmp mode to use hw wrapped keys in custom keyslot.
+
+config KEYS_IN_CUSTOM_KEYSLOT
+	bool "Init fmp to use keys in custom keyslot"
+	depends on SCSI_UFS_EXYNOS_FMP
+	help
+	  Choose here to select that fmp mode to use keys in custom keyslot.
+
+config KEYS_IN_PRDT
+	bool "Init fmp to use keys in prdt"
+	depends on SCSI_UFS_EXYNOS_FMP
+	help
+	  Choose here to select that fmp mode to use keys in prdt
+
+endchoice
+
 config SCSI_UFS_CRYPTO
 	bool "UFS Crypto Engine Support"
 	depends on SCSI_UFSHCD && BLK_INLINE_ENCRYPTION
@@ -193,12 +258,30 @@ config SCSI_UFS_HPB
 	  read command by piggybacking physical page number for bypassing FTL (flash
 	  translation layer)'s L2P address translation.
 
+config SEC_UFS_FEATURE
+	tristate "SEC specific UFS feature"
+	depends on SCSI_UFSHCD
+	help
+	  Enable Samsung feature support
+	  Enabling this allows kernel to use SEC specific feature
+	  defined and implemented by SEC.
+
 config SCSI_UFS_FAULT_INJECTION
 	bool "UFS Fault Injection Support"
 	depends on SCSI_UFSHCD && FAULT_INJECTION
 	help
 	  Enable fault injection support in the UFS driver. This makes it easier
 	  to test the UFS error handler and abort handler.
+
+config SEC_UFS_CMD_LOGGING
+	bool "Samsung UFS CMD logging feature"
+	default n
+	depends on SEC_UFS_FEATURE
+	help
+	  This selects support for command logging.
+	  Select this option if this feature is needed on working.
+
+	  If unsure, say N.
 
 config SCSI_UFS_HWMON
 	bool "UFS Temperature Notification"

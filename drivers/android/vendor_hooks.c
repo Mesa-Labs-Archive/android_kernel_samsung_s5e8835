@@ -110,6 +110,8 @@
 #include <trace/hooks/direct_io.h>
 #include <trace/hooks/loop.h>
 #include <trace/hooks/psi.h>
+#include <trace/hooks/mz.h>
+
 /*
  * Export tracepoints that act as a bare tracehook (ie: have no trace event
  * associated with them) to allow external modules to probe them.
@@ -444,3 +446,4 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_use_cma_first_check);
  */
 const struct readahead_control *GKI_struct_readahead_control;
 EXPORT_SYMBOL_GPL(GKI_struct_readahead_control);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mz_exit);

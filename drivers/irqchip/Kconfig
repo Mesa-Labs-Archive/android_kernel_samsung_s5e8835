@@ -604,4 +604,15 @@ config APPLE_AIC
 	  Support for the Apple Interrupt Controller found on Apple Silicon SoCs,
 	  such as the M1.
 
+config EXYNOS_GIC
+	bool "Exynos GIC Additional handler"
+	default n
+	help
+	  Support for Exynos GIC Vendor hook work. Only for Multi target irq
+	  vendor hook handler driver, it must be in kernel DD (Device Driver)
+	  git by exynos kernel driver policy.
+	  if you want add MultiTargetIRQ, set it y.
+
+source "drivers/irqchip/exynos/Kconfig"
+
 endmenu

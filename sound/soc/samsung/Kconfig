@@ -233,4 +233,16 @@ config SND_SOC_SAMSUNG_MIDAS_WM1811
 	help
 	  Say Y if you want to add support for SoC audio on the Midas boards.
 
+config SND_SOC_SAMSUNG_EXYNOS8535_S5M3700X_I2C
+	tristate "S5M3700X support on exynos8535 with i2c bus"
+	select SND_SOC_S5M3700X
+	select SND_SOC_S5M3700X_VTS
+
+config SND_SOC_SAMSUNG_EXYNOS8835_S5M3700X_I2C
+        tristate "S5M3700X support on exynos8835 with i2c bus"
+        select SND_SOC_S5M3700X
+        select SND_SOC_S5M3700X_VTS
+
+source "sound/soc/samsung/exynos/Kconfig"
+
 endif #SND_SOC_SAMSUNG

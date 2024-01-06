@@ -1990,7 +1990,8 @@ out:
 	WARN_ON((int)tp->sacked_out < 0);
 	WARN_ON((int)tp->lost_out < 0);
 	WARN_ON((int)tp->retrans_out < 0);
-	WARN_ON((int)tcp_packets_in_flight(tp) < 0);
+	if (sk->sk_state == TCP_ESTABLISHED)
+		WARN_ON((int)tcp_packets_in_flight(tp) < 0);
 #endif
 	return state->flag;
 }

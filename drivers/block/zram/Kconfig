@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0
 config ZRAM
 	tristate "Compressed RAM block device support"
-	depends on BLOCK && SYSFS && ZSMALLOC && CRYPTO
-	depends on CRYPTO_LZO || CRYPTO_ZSTD || CRYPTO_LZ4 || CRYPTO_LZ4HC || CRYPTO_842
+#	depends on BLOCK && SYSFS && ZSMALLOC && CRYPTO
+#	depends on CRYPTO_LZO || CRYPTO_ZSTD || CRYPTO_LZ4 || CRYPTO_LZ4HC || CRYPTO_842
+	default m
 	help
 	  Creates virtual block devices called /dev/zramX (X = 0, 1, ...).
 	  Pages written to these disks are compressed and stored in memory
@@ -57,6 +58,7 @@ config ZRAM_DEF_COMP
 config ZRAM_WRITEBACK
        bool "Write back incompressible or idle page to backing device"
        depends on ZRAM
+       default y
        help
 	 With incompressible page, there is no memory saving to keep it
 	 in memory. Instead, write it out to backing device.
@@ -77,3 +79,15 @@ config ZRAM_MEMORY_TRACKING
 	  /sys/kernel/debug/zram/zramX/block_state.
 
 	  See Documentation/admin-guide/blockdev/zram.rst for more information.
+
+config ZRAM_LRU_WRITEBACK
+	bool
+	depends on ZRAM_WRITEBACK
+	default y
+	help
+	  This feature supports zram lru-based writeback (SQZR).
+
+config ZRAM_LRU_WRITEBACK_LIMIT
+	int "Limit zram lru writeback"
+	default 5120
+	depends on ZRAM_LRU_WRITEBACK

@@ -514,4 +514,15 @@ source "drivers/misc/cardreader/Kconfig"
 source "drivers/misc/habanalabs/Kconfig"
 source "drivers/misc/uacce/Kconfig"
 source "drivers/misc/pvpanic/Kconfig"
+source "drivers/misc/samsung/Kconfig"
+source "drivers/misc/tzdev/Kconfig"
+source "drivers/misc/tui/Kconfig"
 endmenu
+
+#
+# Dev-Ril-Bridge driver
+#
+
+config DEV_RIL_BRIDGE
+	tristate "Support a bridge between device and RIL"
+	default n

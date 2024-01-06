@@ -85,3 +85,5 @@ obj-$(CONFIG_USB_HCD_BCMA)	+= bcma-hcd.o
 obj-$(CONFIG_USB_HCD_SSB)	+= ssb-hcd.o
 obj-$(CONFIG_USB_FOTG210_HCD)	+= fotg210-hcd.o
 obj-$(CONFIG_USB_MAX3421_HCD)	+= max3421-hcd.o
+obj-$(CONFIG_USB_XHCI_EXYNOS)	+= xhci-exynos.o
+obj-$(CONFIG_USB_XHCI_EXYNOS_AUDIO)	+= xhci-exynos-audio.o

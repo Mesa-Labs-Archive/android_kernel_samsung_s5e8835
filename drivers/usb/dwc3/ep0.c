@@ -197,6 +197,7 @@ int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,
 	int				ret;
 
 	spin_lock_irqsave(&dwc->lock, flags);
+	dwc3_lock_logging(DWC3_GADGET_EP0_QUEUE_FUNC, 1);
 	if (!dep->endpoint.desc || !dwc->pullups_connected || !dwc->connected) {
 		dev_err(dwc->dev, "%s: can't queue to disabled endpoint\n",
 				dep->name);
@@ -213,6 +214,7 @@ int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,
 	ret = __dwc3_gadget_ep0_queue(dep, req);
 
 out:
+	dwc3_lock_logging(DWC3_GADGET_EP0_QUEUE_FUNC, 0);
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
 	return ret;
@@ -263,7 +265,9 @@ int dwc3_gadget_ep0_set_halt(struct usb_ep *ep, int value)
 	int				ret;
 
 	spin_lock_irqsave(&dwc->lock, flags);
+	dwc3_lock_logging(DWC3_GADGET_EP0_SET_HALT_FUNC, 1);
 	ret = __dwc3_gadget_ep0_set_halt(ep, value);
+	dwc3_lock_logging(DWC3_GADGET_EP0_SET_HALT_FUNC, 0);
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
 	return ret;
@@ -281,7 +285,8 @@ void dwc3_ep0_out_start(struct dwc3 *dwc)
 	dwc3_ep0_prepare_one_trb(dep, dwc->ep0_trb_addr, 8,
 			DWC3_TRBCTL_CONTROL_SETUP, false);
 	ret = dwc3_ep0_start_trans(dep);
-	WARN_ON(ret < 0);
+	if (ret < 0)
+		dev_err(dwc->dev, "%s error, ret = %d", ret);
 	for (i = 2; i < DWC3_ENDPOINTS_NUM; i++) {
 		struct dwc3_ep *dwc3_ep;
 
@@ -616,9 +621,11 @@ static int dwc3_ep0_delegate_req(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 	int ret = -EINVAL;
 
 	if (dwc->async_callbacks) {
+		dwc3_lock_logging(DWC3_GADGET_EP0_DELEGATE_FUNC, 0);
 		spin_unlock(&dwc->lock);
 		ret = dwc->gadget_driver->setup(dwc->gadget, ctrl);
 		spin_lock(&dwc->lock);
+		dwc3_lock_logging(DWC3_GADGET_EP0_DELEGATE_FUNC, 1);
 	}
 	return ret;
 }
@@ -1109,7 +1116,8 @@ void dwc3_ep0_end_control_data(struct dwc3 *dwc, struct dwc3_ep *dep)
 	cmd |= DWC3_DEPCMD_PARAM(dep->resource_index);
 	memset(&params, 0, sizeof(params));
 	ret = dwc3_send_gadget_ep_cmd(dep, cmd, &params);
-	WARN_ON_ONCE(ret);
+	if (ret < 0)
+		dev_info(dwc->dev, "Send gadget EP CMD error!! ret: %d\n", ret);
 	dep->resource_index = 0;
 }
 

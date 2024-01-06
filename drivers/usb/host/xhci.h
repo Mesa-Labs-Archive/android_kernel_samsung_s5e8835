@@ -34,6 +34,10 @@
 /* Section 5.3.3 - MaxPorts */
 #define MAX_HC_PORTS		127
 
+/* USB dwc3 driver uses 0 to 0x20 */
+#define PHY_MODE_BUS_SUSPEND	0x30
+#define PHY_MODE_BUS_RESUME	0x31
+
 /*
  * xHCI register interface.
  * This corresponds to the eXtensible Host Controller Interface (xHCI)
@@ -730,6 +734,9 @@ struct xhci_ep_ctx {
 #define EP_STATE_STOPPED	3
 #define EP_STATE_ERROR		4
 #define GET_EP_CTX_STATE(ctx)	(le32_to_cpu((ctx)->ep_info) & EP_STATE_MASK)
+#define EP_RESERVED_MASK	(0xf << 3)
+#define CTX_TO_RESERVED(p)	(((p) >> 3) & 0xf)
+#define EP_RESERVED(p)		(((p) & 0xf) << 3)
 
 /* Mult - Max number of burtst within an interval, in EP companion desc. */
 #define EP_MULT(p)		(((p) & 0x3) << 8)
@@ -2219,6 +2226,15 @@ struct xhci_ep_ctx *xhci_get_ep_ctx(struct xhci_hcd *xhci, struct xhci_container
 struct xhci_ring *xhci_triad_to_transfer_ring(struct xhci_hcd *xhci,
 		unsigned int slot_id, unsigned int ep_index,
 		unsigned int stream_id);
+
+#ifdef CONFIG_SND_EXYNOS_USB_AUDIO_GIC
+void xhci_exynos_parse_endpoint(struct xhci_hcd *xhci, struct usb_device *udev,
+		struct usb_endpoint_descriptor *desc, struct xhci_container_ctx *ctx);
+
+void xhci_exynos_usb_offload_store_hw_info(struct xhci_hcd *xhci,
+		struct usb_hcd *hcd, struct usb_device *udev);
+int xhci_exynos_audio_init(struct device *parent, struct platform_device *pdev);
+#endif
 
 static inline struct xhci_ring *xhci_urb_to_transfer_ring(struct xhci_hcd *xhci,
 								struct urb *urb)

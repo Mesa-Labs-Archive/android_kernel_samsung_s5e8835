@@ -31,9 +31,14 @@
 #include <linux/usb.h>
 #include <linux/usb/quirks.h>
 #include <linux/usb/hcd.h>
+#include <linux/phy/phy-usb.h>
 
 #include "usb.h"
+#include "../host/xhci-exynos-audio.h"
 
+extern struct xhci_exynos_audio *g_xhci_exynos_audio;
+#define PHY_MODE_SUSPEND_BYPASS		0x35
+#define PHY_MODE_RESUME_BYPASS		0x36
 
 /*
  * Adds a new dynamic USBdevice ID to this driver,
@@ -935,7 +940,15 @@ static int usb_uevent(struct device *dev, struct kobj_uevent_env *env)
 			   usb_dev->descriptor.bDeviceSubClass,
 			   usb_dev->descriptor.bDeviceProtocol))
 		return -ENOMEM;
-
+#ifdef CONFIG_USB_DEBUG_DETAILED_LOG
+	pr_info("usb_host : %s: PRODUCT=%x/%x/%x TYPE=%d/%d/%d\n", __func__,
+			   le16_to_cpu(usb_dev->descriptor.idVendor),
+			   le16_to_cpu(usb_dev->descriptor.idProduct),
+			   le16_to_cpu(usb_dev->descriptor.bcdDevice),
+			   usb_dev->descriptor.bDeviceClass,
+			   usb_dev->descriptor.bDeviceSubClass,
+			   usb_dev->descriptor.bDeviceProtocol);
+#endif
 	return 0;
 }
 
@@ -1399,11 +1412,38 @@ static int usb_suspend_both(struct usb_device *udev, pm_message_t msg)
 	int			status = 0;
 	int			i = 0, n = 0;
 	struct usb_interface	*intf;
+	struct usb_device	*hdev;
+	int			bypass;
+
+	if (!udev || !udev->bus || !udev->bus->root_hub) {
+		pr_info("%s: bypass udev 0\n", __func__);
+		goto main;
+	}
 
 	if (udev->state == USB_STATE_NOTATTACHED ||
 			udev->state == USB_STATE_SUSPENDED)
 		goto done;
 
+	hdev = udev->bus->root_hub;
+
+	if (!g_xhci_exynos_audio->hcd) {
+		pr_info("%s: hcd 0\n", __func__);
+		goto main;
+	}
+
+	/* check main hcd */
+	if (g_xhci_exynos_audio->hcd->self.root_hub != hdev)
+		goto main;
+
+	bypass = phy_set_mode_ext(g_xhci_exynos_audio->phy,
+			 PHY_MODE_SUSPEND_BYPASS, 0);
+
+	pr_info("%s: bypass = %d\n", __func__, bypass);
+
+	if (bypass)
+		goto done;
+
+main:
 	/* Suspend all the interfaces and then udev itself */
 	if (udev->actconfig) {
 		n = udev->actconfig->desc.bNumInterfaces;
@@ -1500,11 +1540,41 @@ static int usb_resume_both(struct usb_device *udev, pm_message_t msg)
 	int			status = 0;
 	int			i;
 	struct usb_interface	*intf;
+	struct usb_device	*hdev;
+	int			bypass;
+
+	if (!udev || !udev->bus || !udev->bus->root_hub) {
+		pr_info("%s: bypass udev 0\n", __func__);
+		goto main;
+	}
 
 	if (udev->state == USB_STATE_NOTATTACHED) {
 		status = -ENODEV;
+#if defined(CONFIG_USB_DEBUG_DETAILED_LOG)
+		pr_err("%s: status %d\n", __func__, status);
+#endif
 		goto done;
 	}
+
+	hdev = udev->bus->root_hub;
+
+	if (!g_xhci_exynos_audio->hcd) {
+		pr_info("%s: hcd 0\n", __func__);
+		goto main;
+	}
+
+	if (g_xhci_exynos_audio->hcd->self.root_hub != hdev)
+		goto main;
+
+	bypass = phy_set_mode_ext(g_xhci_exynos_audio->phy,
+			 PHY_MODE_RESUME_BYPASS, 0);
+
+	pr_info("%s: bypass = %d\n", __func__, bypass);
+
+	if (bypass)
+		goto done;
+
+main:
 	udev->can_submit = 1;
 
 	/* Resume the device */
@@ -1519,10 +1589,15 @@ static int usb_resume_both(struct usb_device *udev, pm_message_t msg)
 					udev->reset_resume);
 		}
 	}
+#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
+	if (!udev)
+		goto done;
+#endif
 	usb_mark_last_busy(udev);
-
- done:
+#if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 	dev_vdbg(&udev->dev, "%s: status %d\n", __func__, status);
+#endif
+done:
 	if (!status)
 		udev->reset_resume = 0;
 	return status;

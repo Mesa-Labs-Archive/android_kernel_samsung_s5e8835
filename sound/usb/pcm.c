@@ -152,6 +152,8 @@ find_format(struct list_head *fmt_list_head, snd_pcm_format_t format,
 			found = fp;
 			cur_attr = attr;
 		}
+
+		snd_vendor_set_pcm_binterval(fp, found, &cur_attr, &attr);
 	}
 	return found;
 }
@@ -245,6 +247,8 @@ static bool stop_endpoints(struct snd_usb_substream *subs, bool keep_pending)
 static int start_endpoints(struct snd_usb_substream *subs)
 {
 	int err;
+
+	return 0;
 
 	if (!subs->data_endpoint)
 		return -EINVAL;
@@ -445,6 +449,7 @@ static int configure_endpoints(struct snd_usb_audio *chip,
 			       struct snd_usb_substream *subs)
 {
 	int err;
+	struct usb_interface *iface;
 
 	if (subs->data_endpoint->need_setup) {
 		/* stop any running stream beforehand */
@@ -458,6 +463,13 @@ static int configure_endpoints(struct snd_usb_audio *chip,
 		err = snd_usb_endpoint_configure(chip, subs->data_endpoint);
 		if (err < 0)
 			return err;
+
+		iface = usb_ifnum_to_if(chip->dev, subs->data_endpoint->iface);
+		err = snd_vendor_set_pcm_intf(iface, subs->data_endpoint->iface,
+				subs->data_endpoint->altsetting, subs->direction);
+		if (err < 0)
+			return err;
+
 		snd_usb_set_format_quirk(subs, subs->cur_audiofmt);
 	} else {
 		if (subs->sync_endpoint) {
@@ -640,7 +652,17 @@ static int snd_usb_pcm_prepare(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_usb_substream *subs = runtime->private_data;
 	struct snd_usb_audio *chip = subs->stream->chip;
+	struct snd_usb_endpoint *ep = subs->data_endpoint;
 	int ret;
+
+	if (subs->cur_audiofmt == 0) {
+		dev_err(&subs->dev->dev, "no format is specified\n");
+		return -ENXIO;
+	}
+
+	ret = snd_vendor_set_pcm_buf(subs->dev, subs->cur_audiofmt->iface);
+	if (ret)
+		return ret;
 
 	ret = snd_usb_lock_shutdown(chip);
 	if (ret < 0)
@@ -652,6 +674,11 @@ static int snd_usb_pcm_prepare(struct snd_pcm_substream *substream)
 
 	ret = configure_endpoints(chip, subs);
 	if (ret < 0)
+		goto unlock;
+
+	ret = snd_vendor_set_rate(ep->cur_audiofmt->iface,
+			ep->cur_rate, ep->cur_audiofmt->altsetting);
+	if (!ret)
 		goto unlock;
 
 	/* reset the pointer */
@@ -1138,6 +1165,11 @@ static int snd_usb_pcm_open(struct snd_pcm_substream *substream)
 	struct snd_usb_substream *subs = &as->substream[direction];
 	int ret;
 
+	ret = snd_vendor_set_pcm_connection(subs->dev, SOUND_PCM_OPEN,
+					    direction);
+	if (ret)
+		return ret;
+
 	runtime->hw = snd_usb_hardware;
 	/* need an explicit sync to catch applptr update in low-latency mode */
 	if (direction == SNDRV_PCM_STREAM_PLAYBACK &&
@@ -1170,6 +1202,11 @@ static int snd_usb_pcm_close(struct snd_pcm_substream *substream)
 	struct snd_usb_stream *as = snd_pcm_substream_chip(substream);
 	struct snd_usb_substream *subs = &as->substream[direction];
 	int ret;
+
+	ret = snd_vendor_set_pcm_connection(subs->dev, SOUND_PCM_CLOSE,
+					    direction);
+	if (ret)
+		return ret;
 
 	snd_media_stop_pipeline(subs);
 

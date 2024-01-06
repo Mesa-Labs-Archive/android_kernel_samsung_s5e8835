@@ -16,7 +16,7 @@
 #include <linux/usb/cdc.h>
 #include <linux/netdevice.h>
 
-#define QMULT_DEFAULT 5
+#define QMULT_DEFAULT 10
 
 /*
  * dev_addr: initial value
@@ -37,6 +37,27 @@
 	MODULE_PARM_DESC(host_addr, "Host Ethernet Address")
 
 struct eth_dev;
+
+struct rndis_multipacket {
+	unsigned int tx_qlen;
+	/* Minimum number of TX USB request queued to UDC */
+#define TX_REQ_THRESHOLD	1
+	int no_tx_req_used;
+	int tx_skb_hold_count;
+	u32 tx_req_bufsize;
+	struct hrtimer tx_timer;
+	bool en_timer;
+#define MAX_TX_TIMEOUT_NSECS	6000000
+#define MIN_TX_TIMEOUT_NSECS	500000
+	struct work_struct rx_work;
+	bool occurred_timeout;
+	unsigned int ul_max_pkts_per_xfer;
+	unsigned int dl_max_pkts_per_xfer;
+	unsigned int link_ul_max_pkts_per_xfer;
+	unsigned int link_dl_max_pkts_per_xfer;
+	bool multi_pkt_xfer;
+	u8 max_pkt_per_xfer;
+};
 
 /*
  * This represents the USB side of an "ethernet" link, managed by a USB

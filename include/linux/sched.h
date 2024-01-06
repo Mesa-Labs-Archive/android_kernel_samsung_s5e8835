@@ -1496,6 +1496,11 @@ struct task_struct {
 	int				mce_count;
 #endif
 	ANDROID_VENDOR_DATA_ARRAY(1, 64);
+
+	/*
+	 * [0] : ssdbg_wait.type	// CONFIG_SEC_DEBUG_DTASK
+	 * [1] : ssdbg_wait.data	// CONFIG_SEC_DEBUG_DTASK
+	 */
 	ANDROID_OEM_DATA_ARRAY(1, 6);
 
 #ifdef CONFIG_KRETPROBES

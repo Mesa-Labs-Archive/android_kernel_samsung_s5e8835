@@ -23,3 +23,18 @@ obj-$(CONFIG_S3C2412_COMMON_CLK)+= clk-s3c2412.o
 obj-$(CONFIG_S3C2443_COMMON_CLK)+= clk-s3c2443.o
 obj-$(CONFIG_S3C64XX_COMMON_CLK)	+= clk-s3c64xx.o
 obj-$(CONFIG_S5PV210_COMMON_CLK)	+= clk-s5pv210.o clk-s5pv210-audss.o
+obj-$(CONFIG_COMPOSITE_CLK_SAMSUNG)	+= clk_exynos.o
+ifdef CONFIG_SOC_S5E9925
+clk_exynos-$(CONFIG_COMPOSITE_CLK_SAMSUNG)	+= clk-s5e9925.o
+endif
+ifdef CONFIG_SOC_S5E9935
+clk_exynos-$(CONFIG_COMPOSITE_CLK_SAMSUNG)      += clk-s5e9935.o
+endif
+ifdef CONFIG_SOC_S5E8535
+clk_exynos-$(CONFIG_COMPOSITE_CLK_SAMSUNG)      += clk-s5e8535.o
+endif
+ifdef CONFIG_SOC_S5E8835
+clk_exynos-$(CONFIG_COMPOSITE_CLK_SAMSUNG)      += clk-s5e8835.o
+endif
+
+clk_exynos-$(CONFIG_COMPOSITE_CLK_SAMSUNG)	+= composite.o
