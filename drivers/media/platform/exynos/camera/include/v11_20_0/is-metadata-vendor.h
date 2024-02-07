@@ -2135,6 +2135,23 @@ struct camera2_segmentationInfo_uctl
 	uint16_t object_roi[RECT_IDX_MAX];
 };
 
+struct optical_flow_block_Info {
+	int32_t left;
+	int32_t top;
+	int32_t right;
+	int32_t bottom;
+	int32_t x;
+	int32_t y;
+	int32_t blockMotionScore;
+};
+
+struct camera2_optical_flow_Info {
+	int32_t haveBlock;
+	int32_t motionScore;
+	struct optical_flow_block_Info blockInfos[5];
+	int32_t blocksNum;
+};
+
 /** \brief
   User-defined control area.
   \remarks
@@ -2195,7 +2212,8 @@ struct camera2_uctl {
 	uint32_t			highResolutionMode;
 	enum camera_flip_mode sensorFlip;
 	enum camera_external_lens_mask externalLensType;
-    uint32_t			textDetectionInfo;
+	uint32_t			textDetectionInfo;
+	struct camera2_optical_flow_Info opticalFlowInfo;
 	uint32_t			reserved[46];
 };
 
@@ -2229,6 +2247,7 @@ struct camera2_udm {
 	uint32_t			localMotionIndex;
 	struct camera2_frame_info_udm	frame_info;
 	uint64_t			sensorVsyncTime;
+	uint32_t			globalMotionState;
 	uint32_t			reserved[46];
 };
 
