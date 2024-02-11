@@ -3976,9 +3976,11 @@ static void aw8622x_haptics_set_gain(struct input_dev *dev, u16 gain)
 	aw_info("enter, gain: 0x%04X", gain);
 	aw8622x->input_flag = true;
 	aw8622x->gain = gain;
+#if defined(CONFIG_AW8622X_SAMSUNG_FEATURE)
 	aw_info("before temp check for gain adjustment, gain: 0x%04X", aw8622x->gain);
 	aw8622x->gain = sec_vib_inputff_tune_gain(&aw8622x->sec_vib_ddata, aw8622x->gain);
 	aw_info("after temp check for gain adjustment, gain: 0x%04X", aw8622x->gain);
+#endif //CONFIG_AW8622X_SAMSUNG_FEATURE
 	queue_work(aw8622x->work_queue, &aw8622x->set_gain_work);
 }
 
